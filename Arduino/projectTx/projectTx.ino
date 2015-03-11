@@ -34,6 +34,7 @@ const int tempPin = A0;
 
 unsigned long time=0;
 unsigned long time1=0;
+unsigned long time2=0;
 unsigned long a1=0;
 unsigned long a2=0;
 unsigned long b1=0;
@@ -52,7 +53,7 @@ int b_range = 0;
 int c_range = 0;
 int d_range = 0;
 
-unsigned int temp=25;  // current temperature
+unsigned int temp=32;  // current temperature
 int vel=340; // current velocity
 int vel_inv_micro=29;  // current rate in us/cm
 int vel_inv_inches=74;  // current rate in us/inches
@@ -71,6 +72,8 @@ int A_RANGE = false;
 int B_RANGE = false;
 int C_RANGE = false;
 int D_RANGE = false;
+
+int TOGGLE = true;
 
 int x_val = 0;  // present x location
 int y_val = 0;  // present y location
@@ -111,10 +114,11 @@ char D = 0xB;  //DONE
 long calval=0;
 int calcount=0;
 
+int lastInput;
 
 char tempVal[4] = "   ";
 
-char startmessage[46] = "Current [L:500,B:500 Grid:10]cm  Calibrate?  "; 
+char startmessage[47] = " Current [L:500,B:500 Grid:10]cm  Calibrate?  "; 
 char xmessage[35] = "Enter X-length btw 0 and 550cm    ";
 char ymessage[35] = "Enter Y-length btw 0 and 550cm    ";
 char gridmessage[35] = "Enter Grid size btw 10 and 50cm   ";
@@ -217,21 +221,15 @@ void performRange()
   b_range = (b_range * 1.0024) - 57.6;
   c_range = (c_range * 1.0024) - 57.6;
   d_range = (d_range * 1.0024) - 57.6;
-
-//  a_range = (a_range * 0.9910) - 21.15;
-//  b_range = (b_range * 0.9910) - 21.15;
-//  c_range = (c_range * 0.9910) - 21.15;
-//  d_range = (d_range * 0.9910) - 21.15;
-
-  Serial.print("a_range:");
-  Serial.print(a_range);
-  Serial.print("b_range:");
-  Serial.print(b_range);
-  Serial.print("c_range:");
-  Serial.print(c_range);
-  Serial.print("d_range:");
-  Serial.println(d_range);
-  delay(100);  
+//  Serial.print("a_range:");
+//  Serial.print(a_range);
+//  Serial.print("b_range:");
+//  Serial.print(b_range);
+//  Serial.print("c_range:");
+//  Serial.print(c_range);
+//  Serial.print("d_range:");
+//  Serial.println(d_range);
+  
 }
 
 void readTemp()  // read temperature and compute conversion rate
@@ -286,7 +284,7 @@ void setup() {
 // LOOP
 void loop()
 {
-  mode();
+//  mode();
   
   if(_RESTART_) restart();
   
@@ -328,7 +326,7 @@ char * val_to_char(int value, int len)
     *(tempVal+len-1-i) = ch;
     value = value/10;
   }
-  while(tempVal[0] == '0')
+  while(tempVal[0] == '0' && !(tempVal[1] == '\n'))
   {
     int j=0;
     while(j<len-1)
@@ -377,7 +375,7 @@ void calculate()
 //        Serial.print(A1);
 //        Serial.print("||");
 //        Serial.println(A2);
-//        
+        
       }
       else if((A_RANGE && D_RANGE))
       {
@@ -428,6 +426,8 @@ void calculate()
 //  Serial.print("||");
 //  Serial.println(y_val);
   A_RANGE = B_RANGE = C_RANGE = D_RANGE = false;
+  
+
   x_ind_max = point_to_ind(x_max);
   y_ind_max = point_to_ind(y_max);
 
@@ -436,6 +436,7 @@ void calculate()
   y_ind_val = point_to_ind(y_val);
   
   max_grid_no = x_max * y_max/(grid_max * grid_max);
+
 
 }
 
@@ -471,25 +472,25 @@ float hypotenus(float x1, float x2, float y1, float y2)
 // END
 
 // DISPLAY + ACCEPT KEY FUNCTIONS
-void hor_lcd_roll(char* message, int len, char* value, int pos, int delay1, int delay2, void (*pf)(char, int*) )
+void hor_lcd_roll(char message[50], int len, char* value, int pos, int delay1, int delay2, void (*pf)(char, int*) )
 {
-  int i=0;
-  char stream[17] = "JustANonentityNo";
+  int i=1;
+  char stream[17];
   lcd.setCursor(0,1);
   lcd.print(value);
   int loop_end=0;
   time = millis();
   char key;
-
   while(!loop_end)
   {
     lcd.setCursor(0,0);
     strncpy(stream,(message+i),16);
+
+
   lcd.print(stream);
   
-
   char key = keypad.getKey();
-  
+
   if (key != NO_KEY) 
   {
 //    Serial.println(key);
@@ -561,37 +562,12 @@ void restart()
 {
   if(_MODE_ == false)
   {
-    lcd.setCursor(0,0);
-    lcd.print("    PC Mode     ");
-    lcd.setCursor(0,1);
-    lcd.print("Restarting......");
-    while(!(readByte() == S))
-   {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return;
-      }
-     continue;
-   }
+    while(!(readByte() == S)) continue;
     sendByte(S);
-    while(!(readByte() == H)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-         return; 
-      }
-     continue;
-    }
+    while(!(readByte() == H)) continue;
     char key = readByte();
     getStart(key, NULL);
     _RESTART_ = false;
-    lcd.setCursor(0,1);
-    lcd.print("      Done!     ");
     return;
     
   }
@@ -600,64 +576,44 @@ void restart()
   //strcat(strcat(strcat(strcat(strcat(strcat(strcat(startmessage,"Current [L:"),val_to_char(x_max,3)),",B:"),val_to_char(y_max,3))," Grid:"),val_to_char(grid_max,2)),"]cm Calibrate?  ");
   val_to_char(x_max,3);
     
-  startmessage[11]=tempVal[0];
-  startmessage[12]=tempVal[1];
-  startmessage[13]=tempVal[2];
+  startmessage[12]=tempVal[0];
+  startmessage[13]=tempVal[1];
+  startmessage[14]=tempVal[2];
   val_to_char(y_max,3);
-  startmessage[17]=tempVal[0];
-  startmessage[18]=tempVal[1];
-  startmessage[19]=tempVal[2];
+  startmessage[18]=tempVal[0];
+  startmessage[19]=tempVal[1];
+  startmessage[20]=tempVal[2];
   val_to_char(grid_max,2);
-  startmessage[26]=tempVal[0];
-  startmessage[27]=tempVal[1];
+  startmessage[27]=tempVal[0];
+  startmessage[28]=tempVal[1];
 
-  hor_lcd_roll(startmessage, 45, "  Yes:*   No:#  ", 0, 400, 1000, getStart);
+  hor_lcd_roll(startmessage, 46, "  Yes:*   No:#  ", 0, 400, 1000, getStart);
+  
+  sendByte(C);
+  sendNum(x_max);
+  sendNum(y_max);
+  sendNum(grid_max);
+  
   _RESTART_ = false;
 //  Serial.println("RESTART END");
 
 }
 void calibrate()
 {
-  lcd.setCursor(0,0);
-  lcd.print("CALIBRATE");
+//  lcd.setCursor(0,0);
+//  lcd.print("CALIBRATE");
   if(_MODE_ == false)
   {
-    lcd.setCursor(0,0);
-    lcd.print("    PC Mode     ");
-    lcd.setCursor(0,1);
-    lcd.print("Calibrating.....");
-    while(!(readByte() == C)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
+    while(!(readByte() == C)) continue;
     sendByte(V);
     sendNum(x_max);
     sendNum(y_max);
     sendNum(grid_max);
-    while(!(readByte() == V)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
+    while(!(readByte() == V)) continue;
     x_max = readNum();
     y_max = readNum();
     grid_max = readNum();
     
-    lcd.setCursor(0,1);
-    lcd.print("      Done!     ");
     _CALIBRATE_ = false; 
   _RANGE_ = true;
     return;
@@ -695,6 +651,11 @@ void calibrate()
     grid_max = calval;
   }
   
+  sendByte(C);
+  sendNum(x_max);
+  sendNum(y_max);
+  sendNum(grid_max);
+  
   _CALIBRATE_ = false; 
   _RANGE_ = true;
 //  Serial.println("CALIBRATE END");
@@ -702,103 +663,103 @@ void calibrate()
 
 void range()
 {
-  lcd.setCursor(0,0);
-  lcd.print("RANGE");
+
+//  lcd.setCursor(0,0);
+//  lcd.print("RANGE");
 //  Serial.println("RANGE");
-  lcd.print("POSITION (MENU:*");
   readTemp();
   performRange();
   calculate();
   
-  if((millis() - time1) > 2000)
+  if((millis() - time1) > 1000)
   {
-//  lcd.setCursor(0,0);
-//  lcd.print("A:    B:    TEMP");
-//  lcd.setCursor(0,1);
-//  lcd.print("C:    D:        ");
-//  lcd.setCursor(2,0);
-//  lcd.print(val_to_char(a_range,4));
-//  lcd.setCursor(8,0);
-//  lcd.print(val_to_char(b_range,4));
-//  lcd.setCursor(2,1);
-//  lcd.print(val_to_char(c_range,4));
-//  lcd.setCursor(8,1);
-//  lcd.print(val_to_char(d_range,4));
-//  lcd.setCursor(13,1);
-//  lcd.print(val_to_char(temp,3));
-  
-//  delay(1000);
-  
-  lcd.setCursor(0,0);
-  lcd.print("POSITION (MENU:*");
-  lcd.setCursor(0,1);
-  lcd.print("X:   Y:   [  ,  ");
-  
-//  Serial.print(a_range);
-//  Serial.print("||");
-//  Serial.print(b_range);
-//  Serial.print("||");
-//  Serial.print(c_range);
-//  Serial.print("||");
-//  Serial.println(d_range);
-//  
-//  Serial.print(x_val);
-//  Serial.print("||");
-//  Serial.print(y_val);
-//  Serial.print("||");
-//  Serial.println(grid_val);
-//  Serial.println();
-  
-  lcd.setCursor(2,1);
-  lcd.print(val_to_char(x_val,3));
-  lcd.setCursor(7,1);
-  lcd.print(val_to_char(y_val,3));
-  lcd.setCursor(11,1);
-  lcd.print(val_to_char(x_ind_val,2));
-  lcd.setCursor(14,1);
-  lcd.print(val_to_char(y_ind_val,2));  
-  time1 = millis();
+    if(TOGGLE == true)
+    {
+//      lcd.setCursor(0,0);
+//      lcd.print("A:    B:    TEMP");
+//      lcd.setCursor(0,1);
+//      lcd.print("C:    D:        ");
+//      lcd.setCursor(2,0);
+//      lcd.print(val_to_char(a_range,4));
+//      lcd.setCursor(8,0);
+//      lcd.print(val_to_char(b_range,4));
+//      lcd.setCursor(2,1);
+//      lcd.print(val_to_char(c_range,4));
+//      lcd.setCursor(8,1);
+//      lcd.print(val_to_char(d_range,4));
+//      lcd.setCursor(13,1);
+//      lcd.print(val_to_char(temp,3));
+//      
+//      TOGGLE = false;
+//    }
+//    else
+//    {
+      lcd.setCursor(0,0);
+      lcd.print("POSITION (CLR :*");
+      lcd.setCursor(0,1);
+      lcd.print("X:   Y:   [  ,  ");
+      
+    //  Serial.print(a_range);
+    //  Serial.print("||");
+    //  Serial.print(b_range);
+    //  Serial.print("||");
+    //  Serial.print(c_range);
+    //  Serial.print("||");
+    //  Serial.println(d_range);
+    //  
+    //  Serial.print(x_val);
+    //  Serial.print("||");
+    //  Serial.print(y_val);
+    //  Serial.print("||");
+    //  Serial.println(grid_val);
+    //  Serial.println();
+      
+      lcd.setCursor(2,1);
+      lcd.print(val_to_char(x_val,3));
+      lcd.setCursor(7,1);
+      lcd.print(val_to_char(y_val,3));
+      lcd.setCursor(11,1);
+      lcd.print(val_to_char(x_ind_val,2));
+      lcd.setCursor(14,1);
+      lcd.print(val_to_char(y_ind_val,2));  
+      
+      TOGGLE = true;
+    }
+    time1 = millis();
   }
+  
+    
+    
+  if((Serial.available() > 0))
+  {
+    lastInput = readByte();
+    if((lastInput == C))
+    {
+    sendByte(C);
+    x_max = readNum();
+    y_max = readNum();
+    grid_max = readNum();
+    }
+    if((lastInput == V))
+    {
+      sendByte(V);
+      sendNum(x_val);
+      sendNum(y_val);
+    }
+  }
+  
+    
    
-   if(_MODE_ == false)
-  {
-    
-    while(!(readByte() == R)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
-    sendByte(V);
-    sendNum(x_val);
-    sendNum(y_val);
-    while(!(readByte() == H)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
-    char key = readByte();
-    getRange(key, NULL);
-    
-    return;
-  }
-  
   char key = keypad.getKey();
 //  if (key != NO_KEY) Serial.println(key);
-  if (key == '*') _MENU_ = true;
+  if (key == '*') _RESTART_ = true;
+  if(key == '#') _MENU_ = true;
+  if(key=='D') {
+    sendByte(V);
+      sendNum(x_val);
+      sendNum(y_val);
+  }
   
-
 //  Serial.println("RANGE END");
 }
 
@@ -812,6 +773,9 @@ void mode()
     lcd.print("     PC MODE    ");
     lcd.setCursor(0,1);
     lcd.print("STANDALONE  :  D");
+    
+    
+
   }
 }
 void menu()
@@ -821,29 +785,9 @@ void menu()
   if(_MODE_ == false)
   {
     
-    while(!(readByte() == M)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
+    while(!(readByte() == M)) continue;
     sendByte(M);
-    while(!(readByte() == H)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
+    while(!(readByte() == H)) continue;
     char key = readByte();
     getMenu(key, NULL);
     _MENU_ = false;
@@ -863,32 +807,16 @@ void control()
   lcd.print("CONTROL");
   if(_MODE_ == false)
   {
-    while(!(readByte() == B)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
+    _RANGE_ = false;
+    while(!(readByte() == B)) continue;
     sendByte(B);
-    while(!(readByte() == H)) 
+    while(!(readByte() == H)) continue;
+    
+    while ((_RANGE_ == false) && (_AUTO_ == false))
     {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
+      char key = readByte();
+      getControl(key, NULL);
     }
-
-    char key = readByte();
-    getControl(key, NULL);
     _CONTROL_ = false;
     return;
   }
@@ -905,17 +833,7 @@ void auto1()
   lcd.print("AUTO");
   if(_MODE_ == false)
   {
-    while(!(readByte() == A)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
+    while(!(readByte() == A)) continue;
     sendByte(A);
     
     _POINT_ = true;
@@ -973,30 +891,10 @@ void point()
   lcd.print("POINT");
   if(_MODE_ == false)
   {
-    while(!(readByte() == P))
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
+    while(!(readByte() == P)) continue;
     sendByte(P);
     
-    while(!(readByte() == V)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         return; 
-      }
-     continue;
-    }
+    while(!(readByte() == V)) continue;
     x_point = readNum();
     y_point = readNum();
     
@@ -1044,7 +942,7 @@ void grid()
   while(!(x_ind>=0 && x_ind<=x_ind_max))
   {
     calval = 0;
-    hor_lcd_roll(strcat(strcat(gmessage,val_to_char(x_ind_max,2))," # to end"), 34, "X_index:        ", 0, 400, 1000,getGrid);
+    hor_lcd_roll(gmessage, 34, "X_index:        ", 0, 400, 1000,getGrid);
     x_ind = calval;
   }
 
@@ -1080,24 +978,13 @@ void moving(char* message, int len, int delay1, int delay2)
   int i=0;
   char stream[17] = "JustANonentityNo";
   lcd.setCursor(0,1);
-    lcd.print("  # to cancel   ");
-  
+  lcd.print("                ");
   int loop_end=0;
   time = millis();
   char key;
   if(_MODE_ == false)
   {
-    while(!(readByte() == V)) 
-    {
-      char key = keypad.getKey();
-      if(key=='D') 
-      {
-        _MODE_ = true;
-
-         break; 
-      }
-     continue;
-    }
+    while(!(readByte() == V)) continue;
   }
   while(!loop_end)
   {
@@ -1137,6 +1024,7 @@ void moving(char* message, int len, int delay1, int delay2)
   
   if(_MODE_ == false)
   {
+    if((Serial.available() > 0)) if((readByte() == D)) loop_end = 1;
     sendByte(V);
     sendNum(x_val);
     sendNum(y_val);
@@ -1154,6 +1042,7 @@ void moving(char* message, int len, int delay1, int delay2)
        _MODE_ = true;
      }
    }
+   
    if(theta > 0.08)
    { 
       a = hypotenus(x1, x_val, y1, y_val);
@@ -1161,13 +1050,13 @@ void moving(char* message, int len, int delay1, int delay2)
       
       theta = acos(((sq(a) + sq(b) - sq(c))/(2.0 * a * b)));
       theta = PI - theta;
-      if(x_val > x1) turn_right(theta*5/HALF_PI);
-      else turn_left(theta*5/HALF_PI);
+      if(x_val > x1) turn_right(5);//theta*5/HALF_PI);
+      else turn_left(5);
       forward(5);
    }
    else if(b > 5)
    {
-     forward((b*5)/y_max);
+     forward(5);//b*5);
    }
    else 
    {
@@ -1188,7 +1077,6 @@ void moving(char* message, int len, int delay1, int delay2)
 int readByte()
 {
   while(true){
-    
     if(Serial.available() > 0) {
       return Serial.read();
     }
@@ -1251,6 +1139,7 @@ void getRange(char ch, int *loop_end)
   {
     _MENU_ = true;
     *loop_end = 1; // Terminate the while loop affecting display in calling function
+
   }
 }
 
@@ -1273,10 +1162,10 @@ void getMenu(char ch, int *loop_end)
 void getControl(char ch, int *loop_end)
 {
   switch(ch){
-    case '2': move_forward(); while((keypad.getState()!=IDLE)&&(keypad.getKey()==NO_KEY)) move_forward(); break;
-    case '4': move_left(); while((keypad.getState()!=IDLE)&&(keypad.getKey()==NO_KEY)) move_left(); break;
-    case '6': move_right(); while((keypad.getState()!=IDLE)&&(keypad.getKey()==NO_KEY)) move_right(); break;
-    case '8': move_back(); while((keypad.getState()!=IDLE)&&(keypad.getKey()==NO_KEY)) move_back(); break;
+    case '2': move_forward();break;
+    case '4': move_left();break;
+    case '6': move_right();break;
+    case '8': move_back();break;
     case 'A': _AUTO_ = true; *loop_end = 1; _CONTROL_ = false;break;
     case '#': _RANGE_ = true; *loop_end = 1; _CONTROL_ = false;break;
     default : break;
