@@ -60,7 +60,7 @@ int vel_inv_inches=74;  // current rate in us/inches
 
 int _RESTART_= true;
 int _START_ = true;
-int _CALIBRATE_= false;
+int _CALIBRATE_= true;
 int _RANGE_= true;
 int _MENU_= false;
 int _CONTROL_= false;
@@ -286,17 +286,17 @@ void loop()
 {
 //  mode();
   
-  if(_RESTART_) restart();
+//  if(_RESTART_) restart();
   
   if (_CALIBRATE_) calibrate();
   
   if (_RANGE_) range();
   
-  if (_MENU_) menu();
+//  if (_MENU_) menu();
   
-  if (_CONTROL_) control();
+//  if (_CONTROL_) control();
   
-  if (_AUTO_) auto1();
+//  if (_AUTO_) auto1();
   
    
 }
@@ -358,12 +358,28 @@ void calculate()
       {
         float x1 = set(a_range, d_range, x_max);
         float x2 = set(b_range, c_range, x_max);
-        float D1 = (a_range + d_range + x_max)/2.0;
-        float A1 = sqrt(abs(1.0 * D1*(D1-a_range)*(D1-d_range)*(D1-x_max)));
-        float D2 = (b_range + c_range + x_max)/2.0;
-        float A2 = sqrt(abs(1.0 * D2*(D2-b_range)*(D2-c_range)*(D2-x_max)));
+        float D1 = 1;
+        if(a_range <= x1)
+        {
+          
+        }
+        else
+        {
+          D1 = sqrt((a_range + x1)*(a_range - x1));
+        }
+        float D2 = 1;
+        if(b_range <= x2)
+        {
+       
+        }
+        else
+        {
+          D2 = sqrt((b_range + x2)*(b_range - x2));
+        }
         
-        x_val = ((x1*(A1/(A1+A2))) + (x2*(A2/(A1+A2))));
+        
+//        
+        x_val = ((x1*D1) + (x2*D2))/(D1+D2);
 //        Serial.print(x1);
 //        Serial.print("||");
 //        Serial.print(x2);
@@ -395,13 +411,29 @@ void calculate()
       {
         float y1 = set(b_range, a_range, y_max);
         float y2 = set(c_range, d_range, y_max);
-        float D1 = (b_range + a_range + y_max)/2.0;
-        float A1 = sqrt(abs(1.0 * D1*(D1-b_range)*(D1-a_range)*(D1-y_max)));
-        float D2 = (c_range + d_range + y_max)/2.0;
-        float A2 = sqrt(abs(1.0 * D2*(D2-c_range)*(D2-d_range)*(D2-y_max)));
+        float D1 = 1;
+        if(c_range <= y1)
+        {
+          
+        }
+        else
+        {
+          D1 = sqrt((c_range + y1)*(c_range - y1));
+        }
         
-        y_val = ((y1*(A1/(A1+A2))) + (y2*(A2/(A1+A2))));
-      }
+        float D2 = 1;
+        if(b_range <= y2)
+        {
+          
+        }
+        else
+        {
+          D2 = sqrt((b_range + y2)*(b_range - y2));
+        }
+        
+        
+//        
+        y_val = ((y1*D1) + (y2*D2))/(D1+D2);      }
       else if((A_RANGE && B_RANGE))
       {
         y_val = set(b_range, a_range, y_max);
@@ -602,22 +634,22 @@ void calibrate()
 {
 //  lcd.setCursor(0,0);
 //  lcd.print("CALIBRATE");
-  if(_MODE_ == false)
-  {
-    while(!(readByte() == C)) continue;
-    sendByte(V);
-    sendNum(x_max);
-    sendNum(y_max);
-    sendNum(grid_max);
-    while(!(readByte() == V)) continue;
-    x_max = readNum();
-    y_max = readNum();
-    grid_max = readNum();
-    
-    _CALIBRATE_ = false; 
-  _RANGE_ = true;
-    return;
-  }
+//  if(_MODE_ == false)
+//  {
+//    while(!(readByte() == C)) continue;
+//    sendByte(V);
+//    sendNum(x_max);
+//    sendNum(y_max);
+//    sendNum(grid_max);
+//    while(!(readByte() == V)) continue;
+//    x_max = readNum();
+//    y_max = readNum();
+//    grid_max = readNum();
+//    
+//    _CALIBRATE_ = false; 
+//  _RANGE_ = true;
+//    return;
+//  }
 
   
 //  Serial.println("CALIBRATE");
@@ -673,8 +705,8 @@ void range()
   
   if((millis() - time1) > 1000)
   {
-    if(TOGGLE == true)
-    {
+//    if(TOGGLE == true)
+//    {
 //      lcd.setCursor(0,0);
 //      lcd.print("A:    B:    TEMP");
 //      lcd.setCursor(0,1);
@@ -695,24 +727,24 @@ void range()
 //    else
 //    {
       lcd.setCursor(0,0);
-      lcd.print("POSITION (CLR :*");
+      lcd.print("  2-D POSITION  ");
       lcd.setCursor(0,1);
       lcd.print("X:   Y:   [  ,  ");
       
-    //  Serial.print(a_range);
-    //  Serial.print("||");
-    //  Serial.print(b_range);
-    //  Serial.print("||");
-    //  Serial.print(c_range);
-    //  Serial.print("||");
-    //  Serial.println(d_range);
-    //  
-    //  Serial.print(x_val);
-    //  Serial.print("||");
-    //  Serial.print(y_val);
-    //  Serial.print("||");
-    //  Serial.println(grid_val);
-    //  Serial.println();
+//      Serial.print(a_range);
+//      Serial.print("||");
+//      Serial.print(b_range);
+//      Serial.print("||");
+//      Serial.print(c_range);
+//      Serial.print("||");
+//      Serial.println(d_range);
+//    //  
+//      Serial.print(x_val);
+//      Serial.print("||");
+//      Serial.print(y_val);
+//      Serial.print("||");
+//      Serial.println(grid_val);
+//      Serial.println();
       
       lcd.setCursor(2,1);
       lcd.print(val_to_char(x_val,3));
@@ -723,37 +755,58 @@ void range()
       lcd.setCursor(14,1);
       lcd.print(val_to_char(y_ind_val,2));  
       
-      TOGGLE = true;
-    }
+      sendByte(V);
+      sendNum(x_val);
+      sendNum(y_val);
+//      TOGGLE = true;
+//    }
     time1 = millis();
   }
   
     
     
-  if((Serial.available() > 0))
-  {
-    lastInput = readByte();
-    if((lastInput == C))
-    {
-    sendByte(C);
-    x_max = readNum();
-    y_max = readNum();
-    grid_max = readNum();
-    }
-    if((lastInput == V))
-    {
-      sendByte(V);
-      sendNum(x_val);
-      sendNum(y_val);
-    }
-  }
+//  if((Serial.available() > 0))
+//  {
+//    lastInput = readByte();
+//    if((lastInput == C))
+//    {
+//    sendByte(C);
+//    x_max = readNum();
+//    y_max = readNum();
+//    grid_max = readNum();
+//    }
+//    if((lastInput == V))
+//    {
+      
+//    }
+//  }
   
     
    
   char key = keypad.getKey();
 //  if (key != NO_KEY) Serial.println(key);
-  if (key == '*') _RESTART_ = true;
-  if(key == '#') _MENU_ = true;
+  if (key == 'A') 
+  {
+      lcd.setCursor(0,0);
+      lcd.print("A:    B:    TEMP");
+      lcd.setCursor(0,1);
+      lcd.print("C:    D:        ");
+      lcd.setCursor(2,0);
+      lcd.print(val_to_char(a_range,4));
+      lcd.setCursor(8,0);
+      lcd.print(val_to_char(b_range,4));
+      lcd.setCursor(2,1);
+      lcd.print(val_to_char(c_range,4));
+      lcd.setCursor(8,1);
+      lcd.print(val_to_char(d_range,4));
+  }
+  
+  if(key=='C') {
+    sendByte(C);
+      sendNum(x_max);
+      sendNum(y_max);
+      sendNum(grid_max);
+  }
   if(key=='D') {
     sendByte(V);
       sendNum(x_val);
