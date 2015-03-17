@@ -288,7 +288,7 @@ void loop()
   
 //  if(_RESTART_) restart();
   
-  if (_CALIBRATE_) calibrate();
+//  if (_CALIBRATE_) calibrate();
   
   if (_RANGE_) range();
   
@@ -703,7 +703,7 @@ void range()
   performRange();
   calculate();
   
-  if((millis() - time1) > 1000)
+  if((millis() - time1) > 500)
   {
 //    if(TOGGLE == true)
 //    {
@@ -726,6 +726,14 @@ void range()
 //    }
 //    else
 //    {
+      sendByte(C);
+      sendNum(a_range);
+      sendNum(b_range);
+      sendNum(c_range);
+      sendNum(d_range);
+      sendByte(V);
+      sendNum(x_val);
+      sendNum(y_val);
       lcd.setCursor(0,0);
       lcd.print("  2-D POSITION  ");
       lcd.setCursor(0,1);
@@ -755,9 +763,9 @@ void range()
       lcd.setCursor(14,1);
       lcd.print(val_to_char(y_ind_val,2));  
       
-      sendByte(V);
-      sendNum(x_val);
-      sendNum(y_val);
+//      sendByte(V);
+//      sendNum(x_val);
+//      sendNum(y_val);
 //      TOGGLE = true;
 //    }
     time1 = millis();
@@ -785,9 +793,9 @@ void range()
    
   char key = keypad.getKey();
 //  if (key != NO_KEY) Serial.println(key);
-  if (key == 'A') 
+  if(key=='A')
   {
-      lcd.setCursor(0,0);
+    lcd.setCursor(0,0);
       lcd.print("A:    B:    TEMP");
       lcd.setCursor(0,1);
       lcd.print("C:    D:        ");
@@ -801,17 +809,24 @@ void range()
       lcd.print(val_to_char(d_range,4));
   }
   
-  if(key=='C') {
+  if (key == 'D') 
+  {
     sendByte(C);
-      sendNum(x_max);
-      sendNum(y_max);
-      sendNum(grid_max);
-  }
-  if(key=='D') {
-    sendByte(V);
+      sendNum(a_range);
+      sendNum(b_range);
+      sendNum(c_range);
+      sendNum(d_range);
+      sendByte(V);
       sendNum(x_val);
       sendNum(y_val);
+      
   }
+  
+//  if(key=='D') {
+//    sendByte(V);
+//      sendNum(x_val);
+//      sendNum(y_val);
+//  }
   
 //  Serial.println("RANGE END");
 }
