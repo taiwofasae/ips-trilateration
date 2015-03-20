@@ -1,9 +1,13 @@
+// Version 2
+// Removed rebuilding of map grid during refresh time
+// Object points is just drawn on the map grid
+
 import processing.serial.*;
 
 Serial port;
-String portName = "COM16";
+String portName = "COM13";
   
-//String myPort = Serial.list()[0];
+String myPort = Serial.list()[0];
 
 int lastInput = 0;
 
@@ -24,12 +28,15 @@ int gy = 620;
 int x_val = 0;
 int y_val = 0;
 
+int prevx_val = 0;
+int prevy_val = 0;
+
 int x_ind_val=1;
 int y_ind_val = 1;
 
-int x_max = 500;
-int y_max = 500;
-int grid_max = 20;
+int x_max = 200;
+int y_max = 200;
+int grid_max = 10;
 
 int x_ind_max = 0;
 int y_ind_max = 0;
@@ -63,11 +70,15 @@ void setup() {
   size(700,700);
   background(back);  // deep grey
   createMap(gx,gy,gw,gh,x_max,y_max,grid_max);
+  PFont font = loadFont("AgencyFB-Bold-48.vlw");
+  textFont(font);
+  fill(#37D86E); // RED
+  text("FASAE TAIWO [151407] TEL 599 FEB '15",gx+20,invertY(gy)-30);
   
   GridDisplay(gx,gy,gw,gh,x_max,y_max,grid_max);
   frameRate(2);
-  port = new Serial(this, portName, 9600);
-  
+  port = new Serial(this, myPort, 9600);
+  println(myPort);
 }
 
 void draw() {
@@ -96,22 +107,52 @@ void draw() {
 
       background(back);
       createMap(gx,gy,gw,gh,x_max,y_max,grid_max);
+      PFont font = loadFont("AgencyFB-Bold-48.vlw");
+      textFont(font);
+      fill(#37D86E); // RED
+      text("FASAE TAIWO [151407] TEL 599 FEB '15",gx+20,invertY(gy)-30);
       GridDisplay(gx,gy,gw,gh,x_max,y_max,grid_max);
 
       println(C);
     }
     if(lastInput == V)
     {
+      
+      stroke(#F70C14);  //red
+      strokeWeight(10);
+      point(absXPoint(prevx_val),absYPoint(prevy_val));
+      
       println("val");
       x_val = readNum();
       y_val = readNum();
       println(V);
       println(x_val);
       println(y_val);
+      
+      calculate();
+      noStroke();
+      fill(back);
+      rect(gx+10,invertY(gy)+gh+15,350,30);
+      PFont font = loadFont("AgencyFB-Reg-18.vlw");
+      textFont(font);
+      fill(#B92222); // red
+      text("X : ",gx+20,invertY(gy)+gh+30);
+      text(x_val,gx+50,invertY(gy)+gh+30);
+      text("Y : ",gx+100,invertY(gy)+gh+30);
+      text(y_val,gx+130,invertY(gy)+gh+30);
+      text("Grid: [  "+x_ind_val+" , "+y_ind_val+"]",gx+190,invertY(gy)+gh+30);
+      stroke(#0F18F5);  //blue
+      strokeWeight(10);
+      point(absXPoint(x_val),absYPoint(y_val));
+      
+      prevx_val = x_val;
+      prevy_val = y_val;
     }
-    sendByte(V);
+//    sendByte(V);
     println("here");
-    range();
+//    range();
+
+    
   }  
     
   }
@@ -272,7 +313,7 @@ class Cell {
     allPoints[1][0] = absYPoint(iy);
   }
   
-  
+
   
 }
 
