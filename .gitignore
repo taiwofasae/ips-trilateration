@@ -1,0 +1,6 @@
+# Processing
+*/application.windows32/
+*/application.windows64/
+*/Thumbs.db
+*.DS_Store
+*/thumbs.db
