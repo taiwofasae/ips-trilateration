@@ -1,10 +1,3 @@
-import processing.serial.*;
-
-Serial port;
-String portName = "COM11";
-  
-String myPort = Serial.list()[0];
-
 int lastInput = 0;
 
 
@@ -26,6 +19,13 @@ int b_range = 200;
 int c_range = 250;
 int d_range = 250;
 
+int a_actual = 0;
+int b_actual = 0;
+int c_actual = 0;
+int d_actual = 0;
+
+int x_actual = 0;
+int y_actual = 0;
 
 double a,b;
 int XYsum,Xsum,Ysum,Xsumsq,n;
@@ -62,7 +62,8 @@ int x4 = x_max;
 int y4 = y_max;
 
 // method 2 variables
-int X21,X31,X41,Y21,Y31,Y41,B1,B2,B3,W,Z,M,N,J,K,P,Q,R,S,DET;
+int X21,X31,X41,Y21,Y31,Y41;
+float B1,B2,B3,W,Z,M,N,J,K,P,Q,R,S,DET;
 
 color back = color(158, 178, 122);
 
@@ -101,8 +102,9 @@ int D = 0xB;  //DONE
 
 boolean ready = false;
 
-Button calibrateB, exitB, text1, text2;
+Button ResetB, ActualB, exitB, text1, text2;
 int mode = 0;  //button modes 1: calibrate 2:exit
+int show = 0;
 void setup() {
   size(800,700);
   background(back);  // deep grey
@@ -112,7 +114,8 @@ void setup() {
   color gray = color(204);
   color white = color(255);
   color black = color(0);
-  calibrateB = new Button(650,350,55,20,false,"Calibrate");
+  ActualB = new Button(650,400,55,20,false,"Actual");
+  ResetB = new Button(650,350,55,20,false,"Reset");
   exitB = new Button(650,300,30,20,false,"Exit");
   
   text1 = new Button(130,690,250,20,false,"Welcome");
@@ -124,8 +127,7 @@ void setup() {
   text1.display();
   text2.display();
   frameRate(10);
-  port = new Serial(this, myPort, 9600);
-  
+    
   x_ind_max = point_to_ind(x_max);
   y_ind_max = point_to_ind(y_max);
   
@@ -163,415 +165,163 @@ void setup() {
   text1.text = "Data Loaded";
   text1.display();
   
-   GridDisplay(gx,gy,gw,gh,x_max,y_max,grid_max);
+  GridDisplay(gx,gy,gw,gh,x_max,y_max,grid_max);
   enableButtons();
   displayButtons();
 }
 
-void draw() {
-
-    updateButtons();
-    
-      
-      if((mode==0) && (port.available() > 14)) 
-          {
-            println("Mode 0");
-            GridDisplay(gx,gy,gw,gh,x_max,y_max,grid_max);
-            range();
-          }
-    
-      if(mode==1)
-      {
-        if(calcount == 0)
-        {
-          // delay grid redraw until next data arrives
-          println("Refresh Grid");
-          refreshGrid();
-          // display calibrating
-          text1.text = "Calibrating...";
-          println("Calibrating...");
-          text1.display();
-          calcount++;
-        }
-        
-        if((calcount < 20 )&& (port.available() > 14))
-        {
-          
-            
-          range();
-          calcount++;
-          // display calcount
-          println("Calcount:"+calcount);
-          text2.text = ""+calcount;
-          text2.display();
-        }
-        if(calcount == 20)
-        {
-            // display done
-          text2.text = "Done!";
-          println("Done");
-          text2.display();
-          regression();
-          // display a, b
-          text1.text = "Model: a: "+a + ", b: " + b;
-          println(text1.text);
-          text1.display();
-          calcount = 0;
-          mode = 0;
-        }
-        
-        
-      }
-      
-      if(mode == 3)
-      {
-        if(rancount == -2)
-        {
-
-          // delay grid redraw until next data arrives
-          println("Refresh Grid");
-          refreshGrid();
-            
-          // display cell indices
-          text1.text = "Getting Data for ["+x_ind_val + ", " + y_ind_val + "]";
-          //println(text1.text);
-          text1.display();
-          rancount++;
-        }
-        
-        if ((rancount < 0) && (port.available() > 14))
-        {
-          range();
-          rancount++;
-        }
-        
-        if(rancount == 0)
-        {
-          grid[x_ind_val-1][y_ind_val-1].fillColor = 'G';
-          grid[x_ind_val-1][y_ind_val-1].display();
-          // redraw grid
-          
-          GridDisplay(gx,gy,gw,gh,x_max,y_max,grid_max);
-          
-          // open data file for grid cell
-          filename = nf(x_ind_val,2) + nf(y_ind_val,2) + ".dat";
-          
-          range();
-          // store values
-          data[rancount][0] = a_range;
-          data[rancount][1] = b_range;
-          data[rancount][2] = c_range;
-          data[rancount][3] = d_range;
-          data[rancount][4] = x_val;
-          data[rancount][5] = y_val;
-          
-          rancount++;
-          // display rancount
-          text2.text = ""+rancount;
-          println("Rancount:"+text2.text);
-          text2.display();
-        }
-        if((rancount < 20) && (port.available() > 14))
-        {
-          range();
-          // store values
-          data[rancount][0] = a_range;
-          data[rancount][1] = b_range;
-          data[rancount][2] = c_range;
-          data[rancount][3] = d_range;
-          data[rancount][4] = x_val;
-          data[rancount][5] = y_val;
-          
-          rancount++;
-          // display rancount
-          text2.text = ""+rancount;
-          println("Rancount:"+text2.text);
-          text2.display();
-          
-        }
-        if(rancount == 20)
-        {
-          // store in file
-          output = createWriter(filename);
-          String values = "";
-          
-          for(int i=0;i<20;i++)
-          {
-            values = "";
-            values += data[i][0];
-            for(int j=1;j<6;j++)
-            {
-              values += "," + data[i][j];
-            }
-            output.println(values);
-          }    
-          output.flush();
-          output.close();
-          // display done
-          text2.text = "Done!";
-          text2.display();
-          
-          rancount = -2;
-          mode = 0;
-          // make grid cell darkened to show success
-          grid[x_ind_val-1][y_ind_val-1].fillColor = 'p';
-          completed[x_ind_val-1][y_ind_val-1] = 1;
-        }
-      }
-      
-    if(mode == 2)
-    {
-      // display exiting 
-       text1.text = "Exiting...";
-       println("Exiting...");
-       text1.display();
-       wrapup();
-        
-      exit();
-    }
+void draw() 
+{
+  updateButtons();
+  if(mode==4) // Reset environment
+  {
+    println("Mode 4");
+    background(back);
+    GridDisplay(gx,gy,gw,gh,x_max,y_max,grid_max);
+    mode = 0;
     
   }
-  
-void refreshGrid() {
-//  println("Waiting for Data...");
-//  while(!(port.available()>0)) 
-//  {
-//    // display waiting for data
-//    //text1.text = "Waiting for Data...";
-//    
-//    //text1.display();
-//    updateButtons();
-//
-//    if(exitB.press()&&mousePressed)
-//    {
-//      // display exiting
-//      text1.text = "Exiting...";
-//      println("Exiting...");
-//       text1.display();
-//      wrapup();
-//      
-//      exit();
-//    }
-//    
-//   
-//  }
-  
-  GridDisplay(gx,gy,gw,gh,x_max,y_max,grid_max);
-}
-void wrapup() {
-      // store completed logical variable
-      output1 = createWriter("data/Performed.dat");
-      
-        
-      String values = "";
-      for(int i=0;i<20;i++)
-      {
-        values = "";
-        values += completed[i][0];
-        for(int j=1;j<20;j++)
-        {
-          values += "," + completed[i][j];
-        }
-        output1.println(values);
-      } 
-      output1.flush();
-      output1.close();
-      
-      // store all data
-      output = createWriter("AllData.csv");
-      // create header
-      output.println("R,C,A,B,C,D,x,y,Readings");
-      values = "";
-        
-      for(int i=0;i<20;i++)
-      {
-        
-        
-        for(int j=0;j<20;j++)
-        {
-          
-          if(completed[i][j] == 1)
-          {
-            values = "";
-            // load data from specific index file
-            filename = nf(i+1,2) + nf(j+1,2) + ".dat";
-            String[] lines = loadStrings(filename);
-            for (int m=0;m < lines.length; m++) 
-            {
-              // for each line in the file
-              values = "" + (i+1) + "," + (j+1);
-              String[] pieces = split(lines[m], ',');
-              // If line exist
-              if (pieces.length == 6) 
-              {
-                for(int n=0;n<6;n++) 
-                {
-                  // for every piece in the line
-                  values += "," + pieces[n];
-                }
-                // append reading number
-                values += "," + (m+1);
-              }
-              else
-              {
-                for(int n=0;n<pieces.length;n++) 
-                {
-                  // for every piece in the line
-                  values += "," + pieces[n];
-                }
-                // append reading number
-                values += "," + (m+1);
-              }
-              // printout for every line
-              output.println(values);
-            }
-            
-          }
-          else 
-          {
-            
-            
-            for (int m=0;m < 20; m++) 
-            {
-              values = "" + (i+1) + "," + (j+1);
-                for(int n=0;n<6;n++) 
-                {
-                  values += "," + 0;
-                }
-                values += "," + (m+1);
-                // printout for every line
-                output.println(values);
-            }
-            
-         }
-       }
-      }
-      output.flush();
-      output.close();
-         
-}
-
-void regression()
-{
-  XYsum = int((141.6*a_range) + (134.3*b_range) + (141.6*c_range) + (148.5*d_range));
-  Xsum = a_range + b_range + c_range + d_range;
-  Ysum = 566;
-  Xsumsq = (a_range*a_range) + (b_range*b_range) + (c_range*c_range) + (d_range*d_range);
-  n=4;
-  b = (n*XYsum - (Xsum*Ysum))/(1.0 * n*Xsumsq - (Xsum*Xsum));
-  a = (Ysum - b*Xsum)/n;
-}
+  if( mode == 1) // Actual button pressed
+  {
+    if(show == 1)
+    {
+    // display arcs of actual ranges
+    //in black
+    //calculate actual ranges
+    x_actual = ind_to_point(x_ind_val);
+    y_actual = ind_to_point(y_ind_val);
+    a_actual = int(getA(x_actual, y_actual));
+    b_actual = int(getB(x_actual, y_actual));
+    c_actual = int(getC(x_actual, y_actual));
+    d_actual = int(getD(x_actual, y_actual));
     
-boolean range() {
-   println("Waiting for Data...");
-   
-//    while(!(port.available() > 14))
-//    {
-//      // display waiting for data
-//      //text1.text = "Waiting for Data...";
-//      
-//      //text1.display();
-//       
-//       updateButtons();
-//      if(exitB.press()&&mousePressed)
-//      {
-//        // display exiting
-//        text1.text = "Exiting...";
-//        println("Exiting...");
-//         text1.display();
-//        wrapup();
-//        
-//        exit();
-//      }
-//    }
+    strokeWeight(2);
+    stroke(0);  //black
+    noFill();
+    arc(float(gx),float(invertY(gy)),2*(absXPoint(a_actual) - gx),2*((height - gy)+gh-absYPoint(a_actual)),0,HALF_PI);
     
-      lastInput = readByte();
-      if(lastInput != C) 
-      {
-        println(lastInput);
-        return false;
+    // B
+    
+    arc(float(gx),float(invertY(gy-gh)),2*(absXPoint(b_actual) - gx),2*((height - gy)+gh-absYPoint(b_actual)),TWO_PI - HALF_PI, TWO_PI);
+    
+    // C
+    
+    arc(float(gx+gw),float(invertY(gy-gh)),2*(absXPoint(c_actual) - gx),2*((height - gy)+gh-absYPoint(c_actual)),PI,TWO_PI - HALF_PI);
+    
+    // D
+    
+    arc(float(gx+gw),float(invertY(gy)),2*(absXPoint(d_actual) - gx),2*((height - gy)+gh-absYPoint(d_actual)),HALF_PI, PI);
+    mode = 0;
+    }
+    else
+      mode = 3;
+  }  
+    
+  if(mode == 3)  // Point on Grid clicked
+  {
+    GridDisplay(gx,gy,gw,gh,x_max,y_max,grid_max);            
+    // display cell indices
+    text1.text = "Getting Data for ["+x_ind_val + ", " + y_ind_val + "]";
+    //println(text1.text);
+    text1.display();
+    
+    // load data from specific grid file
+    filename = nf(x_ind_val,2) + nf(y_ind_val,2) + ".dat";
+    String[] lines = loadStrings(filename);
+    for (int m=0;m < lines.length;m++)
+    {
+      String[] pieces = split(lines[m], ',');
+      // If line exist
+      if (pieces.length == 6)
+      {  
+        // retrieve values
+        a_range = int(pieces[0]);
+        b_range = int(pieces[1]);
+        c_range = int(pieces[2]);
+        d_range = int(pieces[3]);
+        x_val = int(pieces[4]);
+        y_val = int(pieces[5]);
+        
+        println("New");
+        println(a_range);
+        println(b_range);
+        println(c_range);
+        println(d_range);
+        // Draw arcs
+        strokeWeight(2);
+        stroke(#FF1769);  //pink
+        noFill();
+        arc(float(gx),float(invertY(gy)),2*(absXPoint(a_range) - gx),2*((height - gy)+gh-absYPoint(a_range)),0,HALF_PI);
+        
+        // B
+        strokeWeight(2);
+        stroke(#B0ABF5);  //pale blue
+        noFill();
+        arc(float(gx),float(invertY(gy-gh)),2*(absXPoint(b_range) - gx),2*((height - gy)+gh-absYPoint(b_range)),TWO_PI - HALF_PI, TWO_PI);
+        
+        // C
+        strokeWeight(2);
+        stroke(#ABF5BC);  //pale green
+        noFill();
+        arc(float(gx+gw),float(invertY(gy-gh)),2*(absXPoint(c_range) - gx),2*((height - gy)+gh-absYPoint(c_range)),PI,TWO_PI - HALF_PI);
+        
+        // D
+        strokeWeight(2);
+        stroke(#F5C3AB);  //pale brown
+        noFill();
+        arc(float(gx+gw),float(invertY(gy)),2*(absXPoint(d_range) - gx),2*((height - gy)+gh-absYPoint(d_range)),HALF_PI, PI);
+    
+        calculate();
+        // Draw points
+        strokeWeight(5);
+        stroke(#F70C14);  //red
+        point(absXPoint(x_meth_1),absYPoint(y_meth_1));
+        
+        stroke(#631EFA);  //blue
+        point(absXPoint(x_meth_2),absYPoint(y_meth_2));
+        
+    //      stroke(#0CED2F);  //green
+    //      point(absXPoint(x_meth_3),absYPoint(y_meth_3));
+    
+//        stroke(#F4FC0A);  //yellow
+//        point(absXPoint(x_val),absYPoint(y_val));
+        
+        stroke(color(0));  //black for centre of grid
+        point(absXPoint(ind_to_point(x_ind_val)), absYPoint(ind_to_point(y_ind_val)));
       }
-      println(lastInput);
-     
-     
-      println("val");
-      a_range = readNum();
-      b_range = readNum();
-      c_range = readNum();
-      d_range = readNum();
-      println("okay");
-      if(readByte() != V) 
-      {
-        return false;
-      }
-        x_val = readNum();
-        y_val = readNum();
-      
-
-      
-
-      // Draw arcs
-      // A
-//      println(a_range);
-//      println(b_range);
-//      println(c_range);
-//      println(d_range);
-      
-      strokeWeight(2);
-      stroke(#FF1769);  //pink
-      noFill();
-      arc(float(gx),float(invertY(gy)),2*(absXPoint(a_range) - gx),2*((height - gy)+gh-absYPoint(a_range)),0,HALF_PI);
-      
-      // B
-      strokeWeight(2);
-      stroke(#B0ABF5);  //pale blue
-      noFill();
-      arc(float(gx),float(invertY(gy-gh)),2*(absXPoint(b_range) - gx),2*((height - gy)+gh-absYPoint(b_range)),TWO_PI - HALF_PI, TWO_PI);
-      
-      // C
-      strokeWeight(2);
-      stroke(#ABF5BC);  //pale green
-      noFill();
-      arc(float(gx+gw),float(invertY(gy-gh)),2*(absXPoint(c_range) - gx),2*((height - gy)+gh-absYPoint(c_range)),PI,TWO_PI - HALF_PI);
-      
-      // D
-      strokeWeight(2);
-      stroke(#F5C3AB);  //pale brown
-      noFill();
-      arc(float(gx+gw),float(invertY(gy)),2*(absXPoint(d_range) - gx),2*((height - gy)+gh-absYPoint(d_range)),HALF_PI, PI);
-      
-      calculate();
-      // Draw points
-      strokeWeight(5);
-      stroke(#F70C14);  //red
-      point(absXPoint(x_meth_1),absYPoint(y_meth_1));
-      
-      stroke(#631EFA);  //blue
-      point(absXPoint(x_meth_2),absYPoint(y_meth_2));
-      
-//      stroke(#0CED2F);  //green
-//      point(absXPoint(x_meth_3),absYPoint(y_meth_3));
-
-      stroke(#F4FC0A);  //yellow
-      point(absXPoint(x_val),absYPoint(y_val));
-      
-      stroke(color(0));  //black for centre of grid
-      point(absXPoint(point_to_ind(x_ind_val)), absYPoint(point_to_ind(y_ind_val)));
+  }
+  text2.text = "Done!";
+  text2.display();
+  
+ 
+  mode = 0;
+}
  
     
- return true;
+  if(mode == 2)
+  {
+    // display exiting 
+     text1.text = "Exiting...";
+     println("Exiting...");
+     
+      
+    exit();
+  }
 }
 
 void enableButtons() {
-  calibrateB.makeEnable(true);
+  ActualB.makeEnable(true);
+  ResetB.makeEnable(true);
   exitB.makeEnable(true);
 }
 void visibleButtons() {
-  calibrateB.makeVisible(true);
+  ActualB.makeVisible(true);
+  ResetB.makeVisible(true);
   exitB.makeVisible(true);
 }
 void displayButtons() {
-  calibrateB.display();
+  ActualB.display();
+  ResetB.display();
   exitB.display();
 }
 void visibleText() {
@@ -583,17 +333,24 @@ void updateText() {
   text2.update();
 }
 void updateButtons() {
-  calibrateB.update();
+  ActualB.update();
+  ResetB.update();
   exitB.update();
 }
 
 void mousePressed() {
   mode = 0;
-  if (calibrateB.press() == true) 
+  if (ActualB.press() == true) 
   { 
     mode = 1;
+    show = (1 - show);
     calcount = 0;
     println("Now Mode 1"); 
+  }
+  if (ResetB.press() == true)
+  {
+    mode = 4;
+    println("Now Mode 4");
   }
   if (exitB.press() == true) 
   { 
@@ -604,8 +361,12 @@ void mousePressed() {
   { 
     x_ind_val = point_to_ind(int(pointXAbs(mouseX)));
     y_ind_val = point_to_ind(int(pointYAbs(mouseY)));
+    print("X_ind:");
+    println(x_ind_val);
+    print("Y_ind:");
+    println(y_ind_val);
     mode = 3;
-    rancount = -2;  
+    rancount = 0;  
     println("Now Mode 3");
   }
   println("Mouse pressed");
@@ -613,10 +374,30 @@ void mousePressed() {
 }
 
 void mouseReleased() {
-  calibrateB.release();
+  ActualB.release();
+  ResetB.release();
   exitB.release();
 }
     
+float getA(int x, int y)
+{
+  return sqrt(sq(y_max - y)+sq(x));
+}
+float getB(int x, int y)
+{
+  return sqrt(sq(y)+sq(x));
+}
+
+float getC(int x, int y)
+{
+  return sqrt(sq(x_max - x)+sq(y));
+}
+
+float getD(int x, int y)
+{
+  return sqrt(sq(y_max - y)+sq(x_max - x));
+}
+
 int point_to_grid(int px, int py)
 {
   return ind_to_grid(point_to_ind(px), point_to_ind(py));
@@ -633,7 +414,7 @@ int point_to_ind(int pt)
 
 int ind_to_point(int ind)
 {
-  return ind*grid_max + int(0.5*grid_max);
+  return ind*grid_max - int(0.5*grid_max);
 }
 
 float set1(float x, float y, float S)
@@ -679,7 +460,7 @@ void calculate()
         
         
 //        
-        x_meth_1 = int(((x1*D1) + (x2*D2))/(D1+D2));
+        x_meth_1 = round(((x1*D1) + (x2*D2))/(D1+D2));
 //        Serial.print(x1);
 //        Serial.print("||");
 //        Serial.print(x2);
@@ -695,13 +476,13 @@ void calculate()
       }
       else if((A_RANGE && D_RANGE))
       {
-        x_meth_1 = int(set1(a_range, d_range, x_max));
-        y_meth_1 = int(y_max - sqrt((a_range *1.0 * a_range) - (x_meth_1 * 1.0 *x_meth_1)));
+        x_meth_1 = round(set1(a_range, d_range, x_max));
+        y_meth_1 = round(y_max - sqrt((a_range *1.0 * a_range) - (x_meth_1 * 1.0 *x_meth_1)));
       }
       else if ((B_RANGE && C_RANGE))
       {
-        x_meth_1 = int(set1(b_range, c_range, x_max));
-        y_meth_1 = int(sqrt((b_range *1.0 * b_range) - (x_meth_1 * 1.0 *x_meth_1)));
+        x_meth_1 = round(set1(b_range, c_range, x_max));
+        y_meth_1 = round(sqrt((b_range *1.0 * b_range) - (x_meth_1 * 1.0 *x_meth_1)));
       }
       
     }
@@ -733,44 +514,53 @@ void calculate()
         
         
 //        
-        y_meth_1 = int(((y1*D1) + (y2*D2))/(D1+D2));      
+        y_meth_1 = round(((y1*D1) + (y2*D2))/(D1+D2));      
       }
       else if((A_RANGE && B_RANGE))
       {
-        y_meth_1 = int(set1(b_range, a_range, y_max));
+        y_meth_1 = round(set1(b_range, a_range, y_max));
         if(!((A_RANGE && D_RANGE) || (B_RANGE && C_RANGE)))
         {
-          x_meth_1 = int(sqrt((b_range *1.0 * b_range) - (x_meth_1 * 1.0 *y_meth_1)));
+          x_meth_1 = round(sqrt((b_range *1.0 * b_range) - (x_meth_1 * 1.0 *y_meth_1)));
         }
 
         
       }
       else if ((C_RANGE && D_RANGE))
       {
-        y_meth_1 = int(set1(c_range, d_range, y_max));
+        y_meth_1 = round(set1(c_range, d_range, y_max));
         if(!((A_RANGE && D_RANGE) || (B_RANGE && C_RANGE)))
         {
-          x_meth_1 = int(x_max - sqrt((c_range *1.0 * c_range) - (y_meth_1 * 1.0 *y_meth_1)));
+          x_meth_1 = round(x_max - sqrt((c_range *1.0 * c_range) - (y_meth_1 * 1.0 *y_meth_1)));
         }
       }
     }
   }
-  A_RANGE = B_RANGE = C_RANGE = D_RANGE = false;
+  else
+ {
+   x_meth_1 = 1000;
+   y_meth_1 = 1000;
+ }
+  
   
   // Method 2
+  if(A_RANGE && B_RANGE && C_RANGE && D_RANGE)
+ {
   X21 = x2-x1;
   X31 = x3-x1;
   X41 = x4-x1;
   Y21 = y2 - y1;
   Y31 = y3 - y1;
   Y41 = y4 - y1;
-  B1 = int(0.5 *(sq(a_range) - sq(b_range) + sq(x_max)));
-  B2 = int(0.5 *(sq(a_range) - sq(c_range) + sq(x_max) + sq(y_max)));
-  B3 = int(0.5 *(sq(a_range) - sq(d_range) + sq(y_max)));
-  M = int(sq(X21) + sq(X31) + sq(X41));
+  //println("X21:"+X21+"X31:"+X31+"X41:"+X41+"Y21:"+Y21+"Y31:"+Y31+"Y41:"+Y41);
+  B1 = (0.5 *(sq(a_range) - sq(b_range) + sq(x_max)));
+  B2 = (0.5 *(sq(a_range) - sq(c_range) + sq(x_max) + sq(y_max)));
+  B3 = (0.5 *(sq(a_range) - sq(d_range) + sq(y_max)));
+  //println("B1:"+B1+" B2:"+B2+" B3:"+B3);
+  M = (sq(X21) + sq(X31) + sq(X41));
   N = X21*Y21 + X31*Y31 + X41*Y41;
   J = N;
-  K = int(sq(Y21) + sq(Y31) + sq(Y41));
+  K = (sq(Y21) + sq(Y31) + sq(Y41));
   DET = M*K - J*N;
   P = K/DET;
   Q = -N/DET;
@@ -778,53 +568,22 @@ void calculate()
   S = M/DET;
   W = X21*B1 + X31*B2 + X41*B3;
   Z = Y21*B1 + Y31*B2 + Y41*B3;
-  x_meth_2 = P*W + Q*Z + x1;
-  y_meth_2 = R*W + S*Z + y1;
+  x_meth_2 = round(P*W + Q*Z + x1);
+  y_meth_2 = round(R*W + S*Z + y1);
+ }
+ else
+ {
+   x_meth_2 = 1000;
+   y_meth_2 = 1000;
+ }
   
   // Method 3
+  A_RANGE = B_RANGE = C_RANGE = D_RANGE = false;
   
 }
   
 
-int readByte() {
-  while(!(boolean(port.available()))) 
-  {
 
-  }
-  long count = 0;
-  while(count < 10000000) count++;
-    
-  
-  return port.read();
-
-}
-
-
-void sendByte(int x)
-{
-   if(port != null)  port.write(x);
-}
-
-int readNum()
-{
-  
-  int num1 = readByte();
-  
-  int num2 = readByte();
-  
-  return num1 + (num2 << 8);
-
-}
-void sendNum(int num)
-{
-  sendByte(num & 255);
-  sendByte((num >> 8) & 255);
-}
-  
-void serialEvent(Serial p)
-{
-  ready = true;
-}
 
 float absXPoint (int xpoint) {
   
@@ -1160,4 +919,3 @@ boolean overRect(int x, int y, int width, int height) {
     }
 
 }
-
