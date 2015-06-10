@@ -1,0 +1,10 @@
+function data = get_beacon_data_by_rc(r, c)
+x = c - 0.5;
+y = r - 0.5;
+sub_x = 20 - x;
+sub_y = 20 - y;
+A = sqrt(x.^2 + sub_y.^2);
+B = sqrt(x.^2 + y.^2);
+C = sqrt(sub_x.^2 + y.^2);
+D = sqrt(sub_x.^2 + sub_y.^2);
+data = [A, B, C, D]*10;
