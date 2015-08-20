@@ -55,10 +55,11 @@ function beacons_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = hObject;
 
 parsedData = varargin{1};
-handles.Ashort = parsedData(:,:,:,1);
-handles.Bshort = parsedData(:,:,:,2);
-handles.Cshort = parsedData(:,:,:,3);
-handles.Dshort = parsedData(:,:,:,4);
+actual = get_actual_beacon_data();
+handles.Ashort = beacon_rmse(parsedData, actual, 1);
+handles.Bshort = beacon_rmse(parsedData, actual, 2);
+handles.Cshort = beacon_rmse(parsedData, actual, 3);
+handles.Dshort = beacon_rmse(parsedData, actual, 4);
 
 
 set(handles.slider1,'Value',0);
@@ -125,8 +126,9 @@ plot_partial(handles.axes8, handles.Dshort, handles);
 plot_partial(handles.axes9, handles.Cshort, handles);
 
 function plot_partial(handle, data, handles)
-axes(handle);
-surfc(handle, 0.5:9.5,0.5:9.5,mean(data,3));
+plot_surface_data(handle, data);
+%axes(handle);
+%surfc(handle, 0.5:9.5,0.5:9.5,mean(data,3));
 set_azimuth_elevation(handle, handles);
 axes(handles.axes9);
 colorbar;

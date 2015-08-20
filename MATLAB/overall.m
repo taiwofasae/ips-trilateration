@@ -22,7 +22,7 @@ function varargout = overall(varargin)
 
 % Edit the above text to modify the response to help overall
 
-% Last Modified by GUIDE v2.5 15-Nov-2017 12:19:29
+% Last Modified by GUIDE v2.5 26-Nov-2017 00:07:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -57,7 +57,10 @@ function overall_OpeningFcn(hObject, eventdata, handles, varargin)
 handles.output = hObject;
 
 parsedData = varargin{1};
-handles.Error = mean(parsedData(:,:,:,1),3);
+calculated = varargin{2};
+actual = get_actual_grid_data();
+handles.Error = grid_rmse(calculated, actual);
+%handles.Error = mean(parsedData(:,:,:,1),3);
 
 handles.Acheck = 1;
 handles.Bcheck = 0;
@@ -176,8 +179,9 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 
 
 function update_plot(handle, data, handles)
-axes(handle);
-surfc(handle, 0.5:9.5,0.5:9.5,data);
+% axes(handle);
+% surfc(handle, 0.5:9.5,0.5:9.5,data);
+plot_surface_data(handle, data);
 colorbar;
 set_azimuth_elevation(handle, handles);
 
@@ -207,3 +211,13 @@ function slider2_Callback(hObject, eventdata, handles)
 % Hints: get(hObject,'Value') returns position of slider
 %        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
 set_azimuth_elevation(handles.axes6, handles);
+
+
+% --- Executes on selection change in popupmenu1.
+function popupmenu1_Callback(hObject, eventdata, handles)
+% hObject    handle to popupmenu1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns popupmenu1 contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from popupmenu1
