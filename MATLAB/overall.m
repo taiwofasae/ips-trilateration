@@ -22,7 +22,7 @@ function varargout = overall(varargin)
 
 % Edit the above text to modify the response to help overall
 
-% Last Modified by GUIDE v2.5 26-Nov-2017 00:07:45
+% Last Modified by GUIDE v2.5 27-Nov-2017 01:01:10
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -56,10 +56,9 @@ function overall_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for overall
 handles.output = hObject;
 
-parsedData = varargin{1};
-calculated = varargin{2};
-actual = get_actual_grid_data();
-handles.Error = grid_rmse(calculated, actual);
+handles.parsedData = varargin{1};
+handles.actual = get_actual_grid_data();
+handles.Error = grid_rmse(trilateration_mmse(handles.parsedData), handles.actual);
 %handles.Error = mean(parsedData(:,:,:,1),3);
 
 handles.Acheck = 1;
@@ -76,7 +75,7 @@ update_check_boxes(hObject, eventdata, handles);
 set(handles.slider1,'Value',0);
 set(handles.slider2,'Value',1.0);
 
-update_plot(handles.axes6, handles.Error, handles);
+update_plot(handles);
 
 % UIWAIT makes overall wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
@@ -178,12 +177,12 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 
-function update_plot(handle, data, handles)
+function update_plot(handles)
 % axes(handle);
 % surfc(handle, 0.5:9.5,0.5:9.5,data);
-plot_surface_data(handle, data);
+plot_surface_data(handles.axes6, handles.Error);
 colorbar;
-set_azimuth_elevation(handle, handles);
+set_azimuth_elevation(handles.axes6, handles);
 
 function set_azimuth_elevation(hObject, handles)
 azi = get(handles.slider1,'Value') * 90;
@@ -221,3 +220,55 @@ function popupmenu1_Callback(hObject, eventdata, handles)
 
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu1 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu1
+selected = (get(hObject, 'Value'));
+update_error_data(selected, handles);
+
+function update_error_data(selected, handles)
+loading(handles);
+update_plot(handles);
+
+if(selected == 1)
+    calculated = trilateration_mmse(handles.parsedData);
+end
+if(selected == 2)
+    calculated = nan(20,20,20,2);
+end
+
+handles.Error = grid_rmse(calculated, handles.actual);
+
+update_plot(handles);
+rmse = overall_rmse(calculated, handles.actual);
+rmse_display(rmse, handles);
+% Update handles structure
+guidata(handles.axes6, handles);
+
+function rmse_display(rmse, handles)
+textField(['RMSE: ',num2str(rmse)], handles);
+
+function loading(handles)
+textField('...loading', handles);
+
+function textField(message, handles)
+set(handles.text13,'String',message);
+% Update handles structure
+guidata(handles.text13, handles);
+
+
+% --- Executes during object creation, after setting all properties.
+function popupmenu1_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to popupmenu1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes during object creation, after setting all properties.
+function text13_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to text13 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
