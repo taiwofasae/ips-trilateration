@@ -5,5 +5,5 @@ function rmse = grid_rmse(data, actual)
 
 error = actual - data;
 squared_error = error.^2;
-squared_error_hash = sum(squared_error, 4, 'omitnan');
+squared_error_hash = sum(squared_error, 4);
 rmse = mean(squared_error_hash, 3, 'omitnan').^0.5;

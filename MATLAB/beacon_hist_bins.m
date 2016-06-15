@@ -5,6 +5,10 @@ function bins = beacon_hist_bins(data, actual, b_n)
 % bins: returns a hist data of actual vs observed x-by-2
 obs = data(:,:,:,b_n);
 act = actual(:,:,:,b_n);
+
+% Generate bins
+act = round(act./20) * 20;
+
 bins = [act(:),obs(:)];
 valid_indices = and(obs(:) < 1000, obs(:) > 0);
 bins = bins(valid_indices, :);

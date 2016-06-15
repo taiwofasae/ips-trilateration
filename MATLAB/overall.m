@@ -112,6 +112,8 @@ else
     set(handles.text11,'visible','off');
 end
 
+update_error_data(handles);
+
 function update_check_boxes(hObject, eventdata, handles)
 set(handles.checkbox1,'Value',handles.Acheck);
 set(handles.checkbox2,'Value',handles.Bcheck);
@@ -175,7 +177,7 @@ function pushbutton1_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton1 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
+update_error_data(handles);
 
 function update_plot(handles)
 % axes(handle);
@@ -221,9 +223,13 @@ function popupmenu1_Callback(hObject, eventdata, handles)
 % Hints: contents = cellstr(get(hObject,'String')) returns popupmenu1 contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from popupmenu1
 selected = (get(hObject, 'Value'));
-update_error_data(selected, handles);
+update_error_data_by_selected(selected, handles);
 
-function update_error_data(selected, handles)
+function update_error_data(handles)
+selected = (get(handles.popupmenu1, 'Value'));
+update_error_data_by_selected(selected, handles);
+
+function update_error_data_by_selected(selected, handles)
 loading(handles);
 update_plot(handles);
 
@@ -231,6 +237,9 @@ if(selected == 1)
     calculated = trilateration_mmse(handles.parsedData);
 end
 if(selected == 2)
+    calculated = trilateration_least_squares(handles.parsedData, [1 1 1 1]);
+end
+if(selected == 3)
     calculated = nan(20,20,20,2);
 end
 
